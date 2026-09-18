@@ -1,0 +1,511 @@
+﻿
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\Main.java ===
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\controller\VacationController.java ===
+
+package controller;
+
+import model.UserEntity;
+import model.VacationRequest;
+import service.VacationRequestService;
+
+import java.time.LocalDate;
+
+public class VacationController {
+
+    private final VacationRequestService vacationRequestService;
+
+    // InyecciÃ³n por constructor (Bajo acoplamiento)
+    public VacationController(VacationRequestService vacationRequestService) {
+        this.vacationRequestService = vacationRequestService;
+    }
+
+    public void createVacationRequestEndpoint(UserEntity empleado, String startDateStr, String endDateStr, UserEntity supervisor) {
+        try {
+            LocalDate start = LocalDate.parse(startDateStr);
+            LocalDate end = LocalDate.parse(endDateStr);
+
+            VacationRequest request = vacationRequestService.createRequest(empleado, start, end, supervisor);
+
+            System.out.println("HTTP 201 Created: Solicitud de vacaciones generada exitosamente para " + empleado.getEmail());
+
+        } catch (IllegalArgumentException e) {
+            System.out.println("HTTP 400 Bad Request: " + e.getMessage());
+        } catch (SecurityException e) {
+            System.out.println("HTTP 403 Forbidden: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("HTTP 500 Internal Error: " + e.getMessage());
+        }
+    }
+
+    public void approveOrDenyVacationRequestEndpoint(VacationRequest request, UserEntity supervisor, boolean approve) {
+        try {
+            vacationRequestService.approveOrDenyRequest(request, supervisor, approve);
+
+            String statusMsg = approve ? "aprobada y dÃ­as descontados exitosamente." : "rechazada.";
+            System.out.println("HTTP 200 OK: Solicitud " + statusMsg);
+
+        } catch (SecurityException e) {
+            System.out.println("HTTP 403 Forbidden: " + e.getMessage());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            System.out.println("HTTP 400 Bad Request: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("HTTP 500 Internal Error: " + e.getMessage());
+        }
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\enums\RoleType.java ===
+
+package enums;
+
+public enum RoleType {
+    EMPLEADO,SUPERVISOR
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\enums\VacationRequestStatus.java ===
+
+package enums;
+
+public enum VacationRequestStatus {
+    PENDING, APPROVED, DENIED
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\model\Role.java ===
+
+package model;
+
+import enums.RoleType;
+
+public class Role {
+    private Long id;
+    private RoleType roleType;
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\model\UserEntity.java ===
+
+package model;
+
+public class UserEntity {
+
+    private Long id;
+    private String email;
+    private String password;
+    private String name;
+    private String surname;
+    private Long vacationsDays;
+    private Long vacationDaysAvailbles;
+    private Role role;
+
+    public UserEntity(Long id, String email, String password, String name, String surname, Long vacationsDays, Long vacationDaysAvailbles, Role role) {
+        this.id = id;
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.surname = surname;
+        this.vacationsDays = vacationsDays;
+        this.vacationDaysAvailbles = vacationDaysAvailbles;
+        this.role = role;
+    }
+
+    public UserEntity() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSurname() {
+        return surname;
+    }
+
+    public void setSurname(String surname) {
+        this.surname = surname;
+    }
+
+    public Long getVacationsDays() {
+        return vacationsDays;
+    }
+
+    public void setVacationsDays(Long vacationsDays) {
+        this.vacationsDays = vacationsDays;
+    }
+
+    public Long getVacationDaysAvailbles() {
+        return vacationDaysAvailbles;
+    }
+
+    public void setVacationDaysAvailbles(Long vacationDaysAvailbles) {
+        this.vacationDaysAvailbles = vacationDaysAvailbles;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    @Override
+    public String toString() {
+        return "UserEntity{" +
+                "id=" + id +
+                ", email='" + email + '\'' +
+                ", password='" + password + '\'' +
+                ", name='" + name + '\'' +
+                ", surname='" + surname + '\'' +
+                ", vacationsDays=" + vacationsDays +
+                ", vacationDaysAvailbles=" + vacationDaysAvailbles +
+                ", role=" + role +
+                '}';
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\model\VacationRequest.java ===
+
+package model;
+
+import enums.VacationRequestStatus;
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+
+public class VacationRequest {
+    private Long id;
+    private UserEntity empleado;
+    private LocalDate start;
+    private LocalDate end;
+    private VacationRequestStatus status;
+    private UserEntity supervisor;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    public VacationRequest(UserEntity empleado, LocalDate start, LocalDate end, UserEntity supervisor) {
+        this.empleado = empleado;
+        this.start = start;
+        this.end = end;
+        this.status = VacationRequestStatus.PENDING;
+        this.supervisor = supervisor;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public LocalDate getStart() { return start; }
+    public LocalDate getEnd() { return end; }
+    public VacationRequestStatus getStatus() { return status; }
+    public void setStatus(VacationRequestStatus status) {
+        this.status = status;
+        this.updatedAt = LocalDateTime.now(); // Actualiza el timestamp de modificaciÃ³n
+    }
+    public UserEntity getEmpleado() { return empleado; }
+    public UserEntity getSupervisor() { return supervisor; }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\repository\UserRepository.java ===
+
+package repository;
+
+import model.UserEntity;
+import java.util.List;
+import java.util.Optional;
+
+public interface UserRepository {
+    UserEntity save(UserEntity user);
+    Optional<UserEntity> findById(Long id);
+    Optional<UserEntity> findByEmail(String email);
+    List<UserEntity> findAll();
+    void delete(Long id);
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\repository\VacationRepository.java ===
+
+package repository;
+
+import model.VacationRequest;
+import model.UserEntity;
+import java.util.List;
+
+public interface VacationRepository {
+    void save(VacationRequest request);
+    List<VacationRequest> findByEmployee(UserEntity employee);
+    List<VacationRequest> findBySupervisor(UserEntity supervisor);
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\repository\repositoryImpl\InMemoryUserRepository.java ===
+
+package repository.repositoryImpl;
+
+import model.UserEntity;
+import repository.UserRepository;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class InMemoryUserRepository implements UserRepository {
+
+    private final List<UserEntity> database = new ArrayList<>();
+    private Long idCounter = 1L;
+
+    @Override
+    public UserEntity save(UserEntity user) {
+        if (user.getId() == null) {
+            user.setId(idCounter++);
+        } else {
+            database.removeIf(u -> u.getId().equals(user.getId()));
+        }
+        database.add(user);
+        return user;
+    }
+
+    @Override
+    public Optional<UserEntity> findById(Long id) {
+        return database.stream().filter(u -> u.getId().equals(id)).findFirst();
+    }
+
+    @Override
+    public Optional<UserEntity> findByEmail(String email) {
+        return database.stream().filter(u -> u.getEmail().equalsIgnoreCase(email)).findFirst();
+    }
+
+    @Override
+    public List<UserEntity> findAll() {
+        return new ArrayList<>(database);
+    }
+
+    @Override
+    public void delete(Long id) {
+        database.removeIf(u -> u.getId().equals(id));
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\repository\repositoryImpl\InMemoryVacationRepository.java ===
+
+package repository.repositoryImpl;
+
+import model.VacationRequest;
+import model.UserEntity;
+import repository.VacationRepository;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class InMemoryVacationRepository implements VacationRepository {
+    private final List<VacationRequest> database = new ArrayList<>();
+
+    @Override
+    public void save(VacationRequest request) {
+        database.add(request);
+    }
+
+    @Override
+    public List<VacationRequest> findByEmployee(UserEntity employee) {
+        return database.stream()
+                .filter(request -> request.getEmpleado().equals(employee))
+                .toList();
+    }
+
+    @Override
+    public List<VacationRequest> findBySupervisor(UserEntity supervisor) {
+        return database.stream()
+                .filter(request -> request.getSupervisor() != null && request.getSupervisor().equals(supervisor))
+                .toList();
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\service\UserService.java ===
+
+package service;
+
+import model.Role;
+import model.UserEntity;
+import java.util.List;
+import java.util.Optional;
+
+public interface UserService {
+    UserEntity registerUser(String email, String password, String name, String surname, Long vacationDays, Role role);
+    Optional<UserEntity> findById(Long id);
+    Optional<UserEntity> findByEmail(String email);
+    List<UserEntity> getAllUsers();
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\service\VacationRequestService.java ===
+
+package service;
+
+import model.UserEntity;
+import model.VacationRequest;
+import java.time.LocalDate;
+
+public interface VacationRequestService {
+    VacationRequest createRequest(UserEntity empleado, LocalDate start, LocalDate end, UserEntity supervisor);
+    void approveOrDenyRequest(VacationRequest request, UserEntity supervisor, boolean approve);
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\service\serviceImpl\UserServiceImpl.java ===
+
+package service.serviceImpl;
+
+import model.Role;
+import model.UserEntity;
+import repository.UserRepository;
+import service.UserService;
+
+import java.util.List;
+import java.util.Optional;
+
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+
+    public UserServiceImpl(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public UserEntity registerUser(String email, String password, String name, String surname, Long vacationDays, Role role) {
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Ya existe un usuario registrado con el correo: " + email);
+        }
+
+        if (vacationDays < 0) {
+            throw new IllegalArgumentException("Los dÃ­as de vacaciones no pueden ser negativos.");
+        }
+
+        UserEntity newUser = new UserEntity(null, email, password, name, surname, vacationDays, vacationDays, role);
+        return userRepository.save(newUser);
+    }
+
+    @Override
+    public Optional<UserEntity> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    @Override
+    public Optional<UserEntity> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public List<UserEntity> getAllUsers() {
+        return userRepository.findAll();
+    }
+}
+
+
+=== C:\Users\e_mar\Desktop\carpeta Leo\metodologia2\metodologia2\src\service\serviceImpl\VacationRequestServiceImpl.java ===
+
+package service.serviceImpl;
+
+import enums.VacationRequestStatus;
+import model.UserEntity;
+import model.VacationRequest;
+import repository.VacationRepository;
+import service.VacationRequestService;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
+public class VacationRequestServiceImpl implements VacationRequestService {
+
+    private final VacationRepository vacationRepository;
+
+    public VacationRequestServiceImpl(VacationRepository vacationRepository) {
+        this.vacationRepository = vacationRepository;
+    }
+
+    @Override
+    public VacationRequest createRequest(UserEntity empleado, LocalDate start, LocalDate end, UserEntity supervisor) {
+
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin.");
+        }
+
+        long requestedDays = ChronoUnit.DAYS.between(start, end) + 1;
+
+        if (requestedDays > empleado.getVacationDaysAvailbles()) {
+            throw new IllegalArgumentException("Los dÃ­as solicitados superan los dÃ­as de vacaciones disponibles.");
+        }
+
+        VacationRequest request = new VacationRequest(empleado, start, end, supervisor);
+        vacationRepository.save(request);
+
+        return request;
+    }
+
+    @Override
+    public void approveOrDenyRequest(VacationRequest request, UserEntity supervisor, boolean approve) {
+        if (!request.getSupervisor().equals(supervisor)) {
+            throw new SecurityException("El supervisor no estÃ¡ autorizado para gestionar esta solicitud.");
+        }
+
+        if (request.getStatus() != VacationRequestStatus.PENDING) {
+            throw new IllegalStateException("Esta solicitud ya fue gestionada anteriormente.");
+        }
+
+        if (approve) {
+            request.setStatus(VacationRequestStatus.APPROVED);
+
+            long approvedDays = ChronoUnit.DAYS.between(request.getStart(), request.getEnd()) + 1;
+            UserEntity empleado = request.getEmpleado();
+
+
+            if (approvedDays > empleado.getVacationDaysAvailbles()) {
+                throw new IllegalArgumentException("El empleado ya no cuenta con suficientes dÃ­as disponibles.");
+            }
+
+            empleado.setVacationDaysAvailbles(empleado.getVacationDaysAvailbles() - approvedDays);
+
+        } else {
+            request.setStatus(VacationRequestStatus.DENIED);
+        }
+    }
+}
