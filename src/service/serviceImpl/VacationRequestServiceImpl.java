@@ -26,15 +26,13 @@ public class VacationRequestServiceImpl implements VacationRequestService {
 
         long requestedDays = ChronoUnit.DAYS.between(start, end) + 1;
 
-        if (requestedDays >= empleado.getVacationDaysAvailbles()) {
+        if (requestedDays > empleado.getVacationDaysAvailbles()) {
             throw new IllegalArgumentException("Los días solicitados superan los días de vacaciones disponibles.");
         }
 
-        // Crear la solicitud
         VacationRequest request = new VacationRequest(empleado, start, end, supervisor);
         vacationRepository.save(request);
 
-        // Descontar días disponibles opcionalmente o manejarlos al aprobar
         return request;
     }
 
@@ -44,8 +42,23 @@ public class VacationRequestServiceImpl implements VacationRequestService {
             throw new SecurityException("El supervisor no está autorizado para gestionar esta solicitud.");
         }
 
+        if (request.getStatus() != VacationRequestStatus.PENDING) {
+            throw new IllegalStateException("Esta solicitud ya fue gestionada anteriormente.");
+        }
+
         if (approve) {
             request.setStatus(VacationRequestStatus.APPROVED);
+
+            long approvedDays = ChronoUnit.DAYS.between(request.getStart(), request.getEnd()) + 1;
+            UserEntity empleado = request.getEmpleado();
+
+
+            if (approvedDays > empleado.getVacationDaysAvailbles()) {
+                throw new IllegalArgumentException("El empleado ya no cuenta con suficientes días disponibles.");
+            }
+
+            empleado.setVacationDaysAvailbles(empleado.getVacationDaysAvailbles() - approvedDays);
+
         } else {
             request.setStatus(VacationRequestStatus.DENIED);
         }

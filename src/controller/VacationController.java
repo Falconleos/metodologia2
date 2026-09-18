@@ -32,4 +32,20 @@ public class VacationController {
             System.out.println("HTTP 500 Internal Error: " + e.getMessage());
         }
     }
+
+    public void approveOrDenyVacationRequestEndpoint(VacationRequest request, UserEntity supervisor, boolean approve) {
+        try {
+            vacationRequestService.approveOrDenyRequest(request, supervisor, approve);
+
+            String statusMsg = approve ? "aprobada y días descontados exitosamente." : "rechazada.";
+            System.out.println("HTTP 200 OK: Solicitud " + statusMsg);
+
+        } catch (SecurityException e) {
+            System.out.println("HTTP 403 Forbidden: " + e.getMessage());
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            System.out.println("HTTP 400 Bad Request: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("HTTP 500 Internal Error: " + e.getMessage());
+        }
+    }
 }
