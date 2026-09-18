@@ -7,10 +7,4 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface UserRepository {
-
-
-    List<UserEntity>listaUsuarios = new ArrayList<>();
-    
-
-
 }

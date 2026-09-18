@@ -11,39 +11,43 @@ import java.time.temporal.ChronoUnit;
 
 public class VacationRequestServiceImpl implements VacationRequestService {
 
-    private VacationRepository vacationRepository;
+    private final VacationRepository vacationRepository;
+
+    public VacationRequestServiceImpl(VacationRepository vacationRepository) {
+        this.vacationRepository = vacationRepository;
+    }
 
     @Override
-    public VacationRequest generateRequest(UserEntity empleado, LocalDate start, LocalDate end, UserEntity supervisor) {
+    public VacationRequest createRequest(UserEntity empleado, LocalDate start, LocalDate end, UserEntity supervisor) {
 
-        //if userEsta logueado
-
-        VacationRequest request = new VacationRequest();
-
-        if(empleado.getVacationDaysAvailbles()>0){
-
-            request = new VacationRequest(empleado,start,end,supervisor);
-            request.setStatus(VacationRequestStatus.PENDING);
-
-            vacationRepository.addToList(request);
-
-            Long cantDays = ChronoUnit.DAYS.between(end,start);
-
-            if(cantDays >= empleado.getVacationDaysAvailbles()){
-                 vacationRepository.findByUser(empleado);
-
-                request.setSupervisor(supervisor);
-                request.setStatus(VacationRequestStatus.GENERATED);
-                System.out.println("Request exitoso");
-
-            }else{
-                throw new RuntimeException("no tiene dias suficientes");
-            }
-
-        }else{
-            throw new RuntimeException("no tiene dias disponibles de vacaciones");
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin.");
         }
 
+        long requestedDays = ChronoUnit.DAYS.between(start, end) + 1;
+
+        if (requestedDays > empleado.getVacationDaysAvailbles()) {
+            throw new IllegalArgumentException("Los días solicitados superan los días de vacaciones disponibles.");
+        }
+
+        // Crear la solicitud
+        VacationRequest request = new VacationRequest(empleado, start, end, supervisor);
+        vacationRepository.save(request);
+
+        // Descontar días disponibles opcionalmente o manejarlos al aprobar
         return request;
+    }
+
+    @Override
+    public void approveOrDenyRequest(VacationRequest request, UserEntity supervisor, boolean approve) {
+        if (!request.getSupervisor().equals(supervisor)) {
+            throw new SecurityException("El supervisor no está autorizado para gestionar esta solicitud.");
+        }
+
+        if (approve) {
+            request.setStatus(VacationRequestStatus.APPROVED);
+        } else {
+            request.setStatus(VacationRequestStatus.DENIED);
+        }
     }
 }
