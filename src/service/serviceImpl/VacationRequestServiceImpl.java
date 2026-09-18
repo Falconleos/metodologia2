@@ -26,7 +26,7 @@ public class VacationRequestServiceImpl implements VacationRequestService {
 
         long requestedDays = ChronoUnit.DAYS.between(start, end) + 1;
 
-        if (requestedDays > empleado.getVacationDaysAvailbles()) {
+        if (requestedDays >= empleado.getVacationDaysAvailbles()) {
             throw new IllegalArgumentException("Los días solicitados superan los días de vacaciones disponibles.");
         }
 
